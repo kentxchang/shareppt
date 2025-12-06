@@ -3,22 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase 簡報同步工具</title>
+    <title>剛好簡報-即時簡報工具</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 引入 PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <title>即時簡報工具</title>
     <style>
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
+
+        /* Landing Page Card Styles */
+        .landing-card {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid #f1f5f9;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .landing-card:hover {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
         .thumbnail.active {
-            border: 4px solid #3b82f6; /* 藍色邊框 */
+            border: 4px solid #3b82f6;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-indigo-50 text-slate-800">
 
     <!-- 右上角控制按鈕 -->
     <div id="top-right-controls" class="fixed top-4 right-4 z-[100] flex gap-3">
@@ -150,75 +178,58 @@ appId: \"...\""></textarea>
     <!-- 主容器 -->
         <div id="app" class="flex items-center justify-center min-h-screen">
         <!-- 角色選擇 -->
-        <div id="role-selection" class="w-full max-w-5xl mx-auto p-8">
+        <div id="role-selection" class="w-full max-w-6xl mx-auto p-4 sm:p-6 flex flex-col items-center animate-fade-in-up">
             <!-- 工具標題與說明 -->
-            <div class="text-center mb-10 bg-white rounded-xl shadow-lg p-8">
-                <h1 class="text-4xl font-bold mb-4 text-blue-600">📊 即時簡報互動工具</h1>
-                <p class="text-gray-600 text-lg mb-2">支援即時同步、學生互動、多種模式的教學簡報系統</p>
-                <div class="flex justify-center gap-8 mt-6 text-sm text-gray-500">
-                    <div class="flex items-center gap-2">
-                        <span class="text-blue-500">✓</span>
-                        <span>PDF 簡報上傳</span>
+            <div class="text-center mb-8">
+                <div class="flex items-center justify-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-indigo-200">
+                        <i class="fas fa-chalkboard"></i>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-blue-500">✓</span>
-                        <span>即時同步播放</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-blue-500">✓</span>
-                        <span>學生互動回饋</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-blue-500">✓</span>
-                        <span>選擇題測驗</span>
-                    </div>
+                    <h1 class="text-4xl md:text-5xl font-bold text-slate-800">剛好簡報-即時簡報互動工具</h1>
                 </div>
+                <p class="text-lg text-slate-500">支援即時同步、學生互動、多種模式的教學簡報系統</p>
             </div>
 
             <!-- 教師和學生入口 -->
-            <div class="grid md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full md:max-w-5xl">
                 <!-- 教師入口 -->
-                <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
+                <div class="landing-card group relative">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-pink-100 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition duration-500"></div>
+                    <div class="relative z-10 flex flex-col h-full">
+                        <div class="w-16 h-16 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-pink-600 group-hover:text-white transition shadow-sm">
+                            <i class="fas fa-chalkboard-teacher"></i>
                         </div>
-                        <h2 class="text-2xl font-bold text-gray-800">教師入口</h2>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-2">教師入口</h2>
+                        <p class="text-slate-500 mb-6">上傳 PDF 簡報或匯入已存檔案，建立互動課堂。可設定頁面模式、即時同步播放、查看學生回饋、匯出簡報資料。</p>
+
+                        <div class="mt-auto space-y-3">
+                            <input type="password" id="teacher-password" placeholder="請輸入教師密碼"
+                                class="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:border-pink-500 transition">
+                            <button id="teacher-btn" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition shadow-lg shadow-pink-200">
+                                進入教師控制台 <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
+                            <p class="text-xs text-slate-400 text-center">需要密碼才能建立和管理簡報</p>
+                        </div>
                     </div>
-                    <p class="text-gray-600 mb-6 text-sm leading-relaxed">
-                        上傳 PDF 簡報或匯入已存檔案，建立互動課堂。可設定頁面模式、即時同步播放、查看學生回饋、匯出簡報資料。
-                    </p>
-                    <div class="space-y-3">
-                        <input type="password" id="teacher-password" placeholder="請輸入教師密碼"
-                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition">
-                        <button id="teacher-btn" class="w-full px-6 py-3 bg-blue-500 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-600 transition duration-300 transform hover:-translate-y-1">
-                            進入教師控制台
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-3">需要密碼才能建立和管理簡報</p>
                 </div>
 
                 <!-- 學生入口 -->
-                <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                            </svg>
+                <div class="landing-card group relative">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-sky-100 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition duration-500"></div>
+                    <div class="relative z-10 flex flex-col h-full">
+                        <div class="w-16 h-16 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-sky-600 group-hover:text-white transition shadow-sm">
+                            <i class="fas fa-user-graduate"></i>
                         </div>
-                        <h2 class="text-2xl font-bold text-gray-800">學生入口</h2>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-2">學生入口</h2>
+                        <p class="text-slate-500 mb-6">掃描 QR Code 或輸入教師提供的網址進入課堂。可即時觀看簡報、參與互動活動、提交塗鴉作品、作答選擇題。</p>
+
+                        <div class="mt-auto">
+                            <button id="student-btn" class="w-full py-3 bg-sky-500 text-white rounded-xl font-bold hover:bg-sky-600 transition shadow-lg shadow-sky-200">
+                                加入課堂 <i class="fas fa-sign-in-alt ml-2"></i>
+                            </button>
+                            <p class="text-xs text-slate-400 mt-3 text-center">輸入姓名後即可加入課堂</p>
+                        </div>
                     </div>
-                    <p class="text-gray-600 mb-6 text-sm leading-relaxed">
-                        掃描 QR Code 或輸入教師提供的網址進入課堂。可即時觀看簡報、參與互動活動、提交塗鴉作品、作答選擇題。
-                    </p>
-                    <div class="space-y-3">
-                        <button id="student-btn" class="w-full px-6 py-3 bg-green-500 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-green-600 transition duration-300 transform hover:-translate-y-1">
-                            進入學生課堂
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-3">輸入姓名後即可加入課堂</p>
                 </div>
             </div>
 
@@ -226,12 +237,18 @@ appId: \"...\""></textarea>
             <div id="error-display" class="text-red-600 text-sm mt-6 text-center h-6"></div>
 
             <!-- 版權與版本資訊 -->
-            <div class="mt-8 text-center text-sm text-gray-500">
-                <p>
-                    Made by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700 hover:underline">阿剛老師</a>
-                    <span class="mx-2">|</span>
-                    <span class="font-semibold">版本 V1</span>
-                </p>
+            <div class="text-center mt-8">
+                <div class="mt-2 text-slate-400 text-sm">
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1</a>
+                </div>
+                <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
+                    <p class="mb-2">
+                        本作品採用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-semibold hover:underline">CC BY-NC-SA 4.0 創用CC授權</a>。
+                    </p>
+                    <p class="text-slate-400">
+                        歡迎非商業用途轉載、引用或改編，請保留「阿剛老師」署名，並附上本作品原始連結。
+                    </p>
+                </div>
             </div>
         </div>
 

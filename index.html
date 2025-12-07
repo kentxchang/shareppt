@@ -242,7 +242,7 @@ appId: \"...\""></textarea>
             <!-- 版權與版本資訊 -->
             <div class="text-center mt-8">
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.1</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -790,7 +790,7 @@ appId: \"...\""></textarea>
     <!-- Firebase SDKs -->
     <script type="module">
         // 匯入 Firebase 模組
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { initializeApp, deleteApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, doc, getDoc, setDoc, updateDoc, 
@@ -1024,10 +1024,39 @@ appId: \"...\""></textarea>
          */
         async function initializeFirebase() {
             try {
+                // 如果已經有 Firebase app 實例，先清理所有監聽器並刪除它以確保使用新的設定
+                const existingApps = getApps();
+                if (existingApps.length > 0) {
+                    console.log("偵測到現有的 Firebase app，將先清除以套用新設定");
+
+                    // 清理所有監聽器
+                    if (attendeesListenerUnsubscribe) {
+                        console.log("清理學生列表監聽器");
+                        attendeesListenerUnsubscribe();
+                        attendeesListenerUnsubscribe = null;
+                    }
+                    if (submissionsListenerUnsubscribe) {
+                        console.log("清理提交監聽器");
+                        submissionsListenerUnsubscribe();
+                        submissionsListenerUnsubscribe = null;
+                    }
+
+                    // 刪除舊的 Firebase app 實例
+                    for (const existingApp of existingApps) {
+                        await deleteApp(existingApp);
+                    }
+
+                    // 重置認證狀態
+                    isAuthReady = false;
+                }
+
+                // 使用新的 firebaseConfig 初始化
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 setLogLevel('Debug'); // 開啟詳細日誌
+
+                console.log("Firebase 已成功初始化，使用 appId:", firebaseConfig.appId);
 
                 await authenticateUser();
             } catch (error) {
@@ -3249,13 +3278,15 @@ appId: \"...\""></textarea>
         function setupFirebaseConfig() {
             const urlParams = new URLSearchParams(window.location.search);
             const configParam = urlParams.get('config');
-            let rawConfigString = localStorage.getItem('firebaseConfig');
-            let configSource = "localStorage";
+            let rawConfigString = null;
+            let configSource = null;
 
-            if (!rawConfigString && configParam) {
+            // URL 參數最優先
+            if (configParam) {
                 try {
                     rawConfigString = atob(configParam);
                     configSource = "URL";
+                    console.log("偵測到 URL 參數中的 Firebase 設定，將優先使用");
                 } catch (e) {
                     console.error("URL config base64 解碼失敗:", e);
                     const errorDisplay = document.getElementById('error-display');
@@ -3266,30 +3297,37 @@ appId: \"...\""></textarea>
                 }
             }
 
+            // 如果 URL 參數沒有設定，才使用 localStorage
+            if (!rawConfigString) {
+                rawConfigString = localStorage.getItem('firebaseConfig');
+                if (rawConfigString) {
+                    configSource = "localStorage";
+                }
+            }
+
             if (rawConfigString) {
                 try {
-                    const applySuccess = applyFirebaseConfig(rawConfigString, true); 
+                    const applySuccess = applyFirebaseConfig(rawConfigString, true);
 
                     if (applySuccess) {
                         isConfigApplied = true;
                         console.log(`已從 ${configSource} 自動載入並套用 Firebase 設定。`);
-                        
-                        if (configSource === "URL") {
-                            localStorage.setItem('firebaseConfig', rawConfigString);
-                        }
+
+                        // 無論來源，都更新 localStorage 以保持同步
+                        localStorage.setItem('firebaseConfig', rawConfigString);
                     } else {
                         throw new Error(`來自 ${configSource} 的設定檔無效。`);
                     }
-                    
+
                 } catch (error) {
                     console.error("Firebase 設定檔處理失敗:", error);
                     const errorDisplay = document.getElementById('error-display');
                     errorDisplay.textContent = `Firebase 設定檔錯誤，請點擊右上角 '?' 按鈕重新設定。`;
-                    
+
                     if (configSource === "localStorage") {
                         localStorage.removeItem('firebaseConfig');
                     }
-                    
+
                     ui.settingsBtn.classList.remove('hidden');
                     ui.helpBtn.classList.remove('hidden');
                 }

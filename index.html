@@ -242,7 +242,7 @@ appId: \"...\""></textarea>
             <!-- 版權與版本資訊 -->
             <div class="text-center mt-8">
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.1</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.2</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -3199,23 +3199,34 @@ appId: \"...\""></textarea>
         function resizeCanvasToSlide() {
             const img = ui.fullscreenSlide;
             const canvas = ui.drawingCanvas;
-            
+
             if (!img.complete || img.naturalHeight === 0) {
                 img.onload = resizeCanvasToSlide;
                 return;
             }
 
             const imgRect = img.getBoundingClientRect();
+
+            // 設置 canvas 的 CSS 顯示位置和大小
             canvas.style.top = `${imgRect.top}px`;
             canvas.style.left = `${imgRect.left}px`;
             canvas.style.width = `${imgRect.width}px`;
             canvas.style.height = `${imgRect.height}px`;
-            
-            canvas.width = imgRect.width;
-            canvas.height = imgRect.height;
-            
+
+            // 使用圖片的原始尺寸作為 canvas 的內部繪圖尺寸
+            // 這樣可以避免在不同螢幕尺寸下的座標偏移問題
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+
             drawingContext.lineCap = 'round';
             drawingContext.lineJoin = 'round';
+
+            // 重繪當前頁面的畫記（如果有的話）
+            const pageId = studentPageOrder[studentCurrentPageIndex];
+            if (pageId) {
+                const teacherDrawings = localDrawingsCache.get(pageId) || [];
+                redrawAllPaths(teacherDrawings);
+            }
         }
 
 

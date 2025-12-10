@@ -241,6 +241,7 @@ appId: \"...\""></textarea>
 
             <!-- 版權與版本資訊 -->
             <div class="text-center mt-8">
+                <p class="text-xs text-slate-400">App ID: <span id="app-id-display"></span> &nbsp;&bull;&nbsp; User ID: <span id="user-id-display"></span></p>
                 <div class="mt-2 text-slate-400 text-sm">
                     Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.2</a>
                 </div>
@@ -1058,6 +1059,12 @@ appId: \"...\""></textarea>
 
                 console.log("Firebase 已成功初始化，使用 appId:", firebaseConfig.appId);
 
+                // 顯示 App ID
+                const appIdDisplay = document.getElementById('app-id-display');
+                if (appIdDisplay) {
+                    appIdDisplay.textContent = firebaseConfig.appId || 'N/A';
+                }
+
                 await authenticateUser();
             } catch (error) {
                 console.error("Firebase 初始化失敗:", error);
@@ -1092,6 +1099,12 @@ appId: \"...\""></textarea>
                     userId = user.uid;
                     isAuthReady = true;
                     console.log("Firebase 已驗證, UserID:", userId);
+
+                    // 顯示 User ID
+                    const userIdDisplay = document.getElementById('user-id-display');
+                    if (userIdDisplay) {
+                        userIdDisplay.textContent = userId;
+                    }
                 }
             });
         }

@@ -243,7 +243,7 @@ appId: \"...\""></textarea>
             <div class="text-center mt-8">
                 <p class="text-xs text-slate-400">App ID: <span id="app-id-display"></span> &nbsp;&bull;&nbsp; User ID: <span id="user-id-display"></span></p>
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.2</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.3</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -3305,7 +3305,7 @@ appId: \"...\""></textarea>
             let rawConfigString = null;
             let configSource = null;
 
-            // URL 參數最優先
+            // 優先順序 1: URL 參數最優先
             if (configParam) {
                 try {
                     rawConfigString = atob(configParam);
@@ -3321,7 +3321,7 @@ appId: \"...\""></textarea>
                 }
             }
 
-            // 如果 URL 參數沒有設定，才使用 localStorage
+            // 優先順序 2: 如果 URL 參數沒有設定，才使用 localStorage
             if (!rawConfigString) {
                 rawConfigString = localStorage.getItem('firebaseConfig');
                 if (rawConfigString) {
@@ -3356,6 +3356,50 @@ appId: \"...\""></textarea>
                     ui.helpBtn.classList.remove('hidden');
                 }
             } else {
+                // ============================================================================
+                // 【Firebase 設定區】- 備用設定（優先權最低）
+                // ============================================================================
+                // 使用方式：將下方六行 "demo" 直接取代為您的 Firebase 設定值
+                //
+                // 1. 前往 Firebase Console > 專案設定 > 一般設定
+                // 2. 在「您的應用程式」區塊找到 firebaseConfig
+                // 3. 複製對應的值，取代下方的 "demo"
+                //
+                // 優先順序：URL 參數 > localStorage > 此設定
+                // 如果上述來源都沒有設定，才會使用這裡的值
+                // ============================================================================
+                const hardcodedConfig = {
+                    apiKey: "demo",
+                    authDomain: "demo",
+                    projectId: "demo",
+                    storageBucket: "demo1.3",
+                    messagingSenderId: "demo",
+                    appId: "demo"
+                };
+                // ============================================================================
+
+                // 檢查是否為有效的設定（非 demo 且不是以 demo 開頭）
+                if (hardcodedConfig.apiKey !== "demo" && !hardcodedConfig.apiKey.startsWith("demo")) {
+                    try {
+                        // 將硬編碼的設定轉換為字串格式
+                        const configString = Object.entries(hardcodedConfig)
+                            .map(([key, value]) => `${key}: "${value}"`)
+                            .join(',\n');
+
+                        const applySuccess = applyFirebaseConfig(configString, true);
+
+                        if (applySuccess) {
+                            isConfigApplied = true;
+                            console.log("已從原始碼中的備用設定自動載入並套用 Firebase 設定。");
+                            configSource = "硬編碼設定";
+                            return;
+                        }
+                    } catch (error) {
+                        console.error("原始碼中的 Firebase 設定初始化失敗:", error);
+                    }
+                }
+
+                // 如果沒有任何可用的設定，顯示錯誤訊息
                 const errorDisplay = document.getElementById('error-display');
                 errorDisplay.textContent = `尚未設定 Firebase。請點擊右上角 '?' 按鈕查看說明。`;
                 ui.settingsBtn.classList.remove('hidden');

@@ -243,7 +243,7 @@ appId: \"...\""></textarea>
             <div class="text-center mt-8">
                 <p class="text-xs text-slate-400">App ID: <span id="app-id-display"></span> &nbsp;&bull;&nbsp; User ID: <span id="user-id-display"></span></p>
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.3</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.5</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -459,6 +459,31 @@ appId: \"...\""></textarea>
             <img id="fullscreen-slide" src="" alt="同步簡報畫面" class="max-w-full max-h-full object-contain">
             <canvas id="drawing-canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
 
+            <!-- 頁面導航按鈕 (左上角) -->
+            <button id="toggle-thumbnails-btn" class="hidden fixed top-4 left-4 z-[60] p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xl transition-all transform hover:scale-105" title="頁面導航">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+
+            <!-- 縮圖導航圖層 (左側) -->
+            <div id="thumbnails-overlay" class="hidden fixed top-0 left-0 h-full w-72 bg-gray-900 bg-opacity-95 z-[55] overflow-y-auto shadow-2xl">
+                <div class="p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-white text-lg font-bold">頁面導航</h3>
+                        <button id="close-thumbnails-btn" class="text-white hover:text-gray-300 text-2xl">&times;</button>
+                    </div>
+                    <div id="thumbnails-overlay-container" class="space-y-3">
+                        <!-- 縮圖將動態插入此處 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 查看學生回應按鈕 (右上角) -->
+            <button id="view-submissions-btn" class="hidden fixed top-4 right-4 z-[60] px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-xl transition-all transform hover:scale-105">
+                📋 查看學生回應
+            </button>
+
             <!-- 學生端網址圖示 -->
             <div id="student-url-icon" class="hidden absolute bottom-5 right-5 z-50">
                 <button class="text-5xl animate-pulse">🔗</button>
@@ -470,7 +495,10 @@ appId: \"...\""></textarea>
                 <button id="prev-btn" class="p-2 bg-white text-gray-800 rounded-lg shadow-lg hover:bg-gray-200 transition disabled:opacity-50" title="上一頁">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
                 </button>
-                <span id="page-info-fullscreen" class="px-3 py-1.5 text-white font-mono text-base flex items-center">0 / 0</span>
+                <div class="flex flex-col items-center gap-0.5">
+                    <span id="page-info-fullscreen" class="px-3 py-0.5 text-white font-mono text-base">0 / 0</span>
+                    <span id="mode-indicator-fullscreen" class="px-2 py-0.5 text-xs text-white bg-purple-600 bg-opacity-70 rounded-md font-bold">簡報</span>
+                </div>
                 <button id="next-btn" class="p-2 bg-white text-gray-800 rounded-lg shadow-lg hover:bg-gray-200 transition disabled:opacity-50" title="下一頁">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                 </button>
@@ -558,20 +586,29 @@ appId: \"...\""></textarea>
             </div>
 
             <!-- 老師接收區 -->
-            <div id="submission-display-area" class="absolute top-16 right-2 w-48 max-h-[80vh] overflow-y-auto p-2 space-y-2 bg-gray-800 bg-opacity-50 rounded-lg hidden">
-                <button id="download-submissions-btn" class="hidden w-full px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-md hover:bg-blue-700 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    下載全部
-                </button>
-                <button id="compare-submissions-btn" class="hidden w-full px-3 py-1.5 bg-green-600 text-white text-xs font-bold rounded-md hover:bg-green-700 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>
-                    比較作品 (<span id="selected-count">0</span>/4)
-                </button>
-                <button id="reset-submissions-btn" class="hidden w-full px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-md hover:bg-red-700 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                    重置所有回應
-                </button>
-                <!-- 學生提交的內容會顯示在這裡 -->
+            <div id="submission-display-area" class="fixed inset-0 overflow-y-auto p-6 bg-black bg-opacity-90 hidden z-60">
+                <!-- 操作按鈕列 -->
+                <div class="flex justify-center gap-3 mb-6">
+                    <button id="download-submissions-btn" class="hidden px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        下載全部
+                    </button>
+                    <button id="compare-submissions-btn" class="hidden px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>
+                        比較作品 (<span id="selected-count">0</span>/4)
+                    </button>
+                    <button id="reset-submissions-btn" class="hidden px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        重置所有回應
+                    </button>
+                    <button id="close-submission-display" class="px-4 py-2 bg-gray-600 text-white text-sm font-bold rounded-lg hover:bg-gray-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        關閉
+                    </button>
+                </div>
+                <!-- 學生提交的內容會以 Grid 排版顯示在這裡 -->
+                <div id="submission-grid-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                </div>
             </div>
         </div>
 
@@ -889,6 +926,11 @@ appId: \"...\""></textarea>
             nextBtn: document.getElementById('next-btn'),
             exitFullscreenBtn: document.getElementById('exit-fullscreen-btn'),
             pageInfoFullscreen: document.getElementById('page-info-fullscreen'),
+            modeIndicatorFullscreen: document.getElementById('mode-indicator-fullscreen'),
+            toggleThumbnailsBtn: document.getElementById('toggle-thumbnails-btn'),
+            thumbnailsOverlay: document.getElementById('thumbnails-overlay'),
+            closeThumbnailsBtn: document.getElementById('close-thumbnails-btn'),
+            thumbnailsOverlayContainer: document.getElementById('thumbnails-overlay-container'),
             
             // 插入頁面控制項
             addPageBtn: document.getElementById('add-page-btn'),
@@ -947,6 +989,9 @@ appId: \"...\""></textarea>
             choiceStudentList: document.getElementById('choice-student-list'),
 
             submissionDisplayArea: document.getElementById('submission-display-area'),
+            submissionGridContainer: document.getElementById('submission-grid-container'), // Grid 容器
+            closeSubmissionDisplay: document.getElementById('close-submission-display'), // 關閉按鈕
+            viewSubmissionsBtn: document.getElementById('view-submissions-btn'), // 查看回應按鈕
             downloadSubmissionsBtn: document.getElementById('download-submissions-btn'), // 下載按鈕
             compareSubmissionsBtn: document.getElementById('compare-submissions-btn'), // 比較按鈕
             resetSubmissionsBtn: document.getElementById('reset-submissions-btn'), // 重置按鈕
@@ -1232,7 +1277,15 @@ appId: \"...\""></textarea>
             ui.prevBtn.addEventListener('click', showPrevPage);
             ui.nextBtn.addEventListener('click', showNextPage);
             ui.exitFullscreenBtn.addEventListener('click', stopSync);
-            
+
+            // 縮圖導航展開/收合
+            ui.toggleThumbnailsBtn.addEventListener('click', () => {
+                ui.thumbnailsOverlay.classList.toggle('hidden');
+            });
+            ui.closeThumbnailsBtn.addEventListener('click', () => {
+                ui.thumbnailsOverlay.classList.add('hidden');
+            });
+
             // 插入新頁面按鈕 - 顯示 Modal
             ui.addPageBtn.addEventListener('click', () => {
                 ui.insertPageModal.classList.remove('hidden');
@@ -1286,6 +1339,19 @@ appId: \"...\""></textarea>
             ui.studentListBtn.addEventListener('click', () => ui.studentListModal.classList.remove('hidden'));
             ui.closeStudentListModal.addEventListener('click', () => ui.studentListModal.classList.add('hidden'));
             ui.closeSubmissionViewerModal.addEventListener('click', () => ui.submissionViewerModal.classList.add('hidden'));
+            ui.closeSubmissionDisplay.addEventListener('click', () => ui.submissionDisplayArea.classList.add('hidden'));
+            ui.viewSubmissionsBtn.addEventListener('click', () => {
+                const pageId = teacherPageOrder[currentPageIndex];
+                const currentMode = teacherLocalPages[pageId]?.mode;
+
+                if (currentMode === 'choice') {
+                    // 選擇題模式：顯示選擇題結果Modal
+                    showChoiceResults(currentSubmissions);
+                } else {
+                    // 文字/塗鴉模式：顯示全畫面Grid區域
+                    ui.submissionDisplayArea.classList.remove('hidden');
+                }
+            });
             ui.downloadSubmissionsBtn.addEventListener('click', downloadSubmissions);
             ui.compareSubmissionsBtn.addEventListener('click', showComparison);
             ui.resetSubmissionsBtn.addEventListener('click', resetAllSubmissions);
@@ -1309,8 +1375,10 @@ appId: \"...\""></textarea>
                         teacherLocalPages[pageId].correctAnswer = newCorrectAnswer;
                     }
 
-                    // 即時更新結果顯示
-                    showChoiceResults(currentSubmissions);
+                    // 只在結果Modal已經顯示時才即時更新結果
+                    if (!ui.choiceResultsModal.classList.contains('hidden')) {
+                        showChoiceResults(currentSubmissions);
+                    }
                     console.log(`頁面 ${pageId} 正確答案已更新為 ${newCorrectAnswer}`);
                 } catch (error) {
                     console.error("更新正確答案失敗:", error);
@@ -1865,6 +1933,73 @@ appId: \"...\""></textarea>
             }
         }
 
+        /**
+         * 生成同步模式下的縮圖導航圖層
+         */
+        function populateThumbnailsOverlay() {
+            const container = ui.thumbnailsOverlayContainer;
+            container.innerHTML = '';
+
+            teacherPageOrder.forEach((pageId, index) => {
+                const pageData = teacherLocalPages[pageId];
+                if (!pageData) return;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'overlay-thumbnail-container relative cursor-pointer';
+
+                const img = document.createElement('img');
+                img.src = pageData.data;
+                img.className = 'w-full h-auto object-cover rounded-md hover:opacity-80 transition';
+                img.dataset.pageId = pageId;
+
+                // 當前頁面高亮
+                const currentPageId = teacherPageOrder[currentPageIndex];
+                if (pageId === currentPageId) {
+                    img.classList.add('ring-4', 'ring-yellow-400');
+                }
+
+                // 點擊跳轉頁面
+                wrapper.addEventListener('click', async () => {
+                    await updateTeacherPage(pageId);
+                    ui.thumbnailsOverlay.classList.add('hidden'); // 跳轉後關閉圖層
+                });
+
+                wrapper.appendChild(img);
+
+                // 頁碼標籤
+                const pageLabel = document.createElement('div');
+                pageLabel.className = 'absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded';
+                pageLabel.textContent = `${index + 1}`;
+                wrapper.appendChild(pageLabel);
+
+                // 互動類型指示器
+                const modeIndicator = document.createElement('span');
+                modeIndicator.className = 'absolute top-1 right-1 text-lg bg-white bg-opacity-70 rounded-full px-1';
+
+                const mode = pageData.mode || 'presentation';
+                if (mode === 'doodle') {
+                    modeIndicator.textContent = '🎨';
+                } else if (mode === 'text') {
+                    modeIndicator.textContent = '📝';
+                } else if (mode === 'choice') {
+                    modeIndicator.textContent = '✓';
+                } else {
+                    modeIndicator.style.display = 'none';
+                }
+                wrapper.appendChild(modeIndicator);
+
+                // 網址指示器
+                if (pageData.url) {
+                    const urlIndicator = document.createElement('span');
+                    urlIndicator.className = 'absolute bottom-1 right-1 text-lg bg-white bg-opacity-70 rounded-full px-1';
+                    urlIndicator.textContent = '🔗';
+                    wrapper.appendChild(urlIndicator);
+                }
+
+                container.appendChild(wrapper);
+            });
+        }
+
         function populateTeacherUI() {
             const panel = document.getElementById('thumbnails-panel');
             panel.innerHTML = '';
@@ -1953,7 +2088,7 @@ appId: \"...\""></textarea>
         async function updateTeacherPage(pageId) {
             const index = teacherPageOrder.indexOf(pageId);
             if (index === -1) return;
-            
+
             currentPageIndex = index;
             const pageData = teacherLocalPages[pageId];
 
@@ -1965,6 +2100,12 @@ appId: \"...\""></textarea>
             // 重置當前繪圖路徑（切換頁面時清除未保存的畫記）
             currentDrawingPath = [];
 
+            // 切換頁面時關閉選擇題結果Modal和學生答案顯示區域
+            ui.choiceResultsModal.classList.add('hidden');
+            ui.submissionDisplayArea.classList.add('hidden');
+            // 切換頁面時隱藏查看回應按鈕，等新頁面的提交載入後再決定是否顯示
+            ui.viewSubmissionsBtn.classList.add('hidden');
+
             const drawings = pageData.drawings || [];
             localDrawingsCache.set(pageId, drawings);
             redrawAllPaths(drawings);
@@ -1973,6 +2114,18 @@ appId: \"...\""></textarea>
             ui.pageInfoPresenter.textContent = `頁碼: ${pageText}`;
             ui.pageInfoFullscreen.textContent = pageText;
 
+            // 更新互動類型提示
+            const currentMode = pageData.mode || 'presentation';
+            let modeText = '簡報';
+            if (currentMode === 'doodle') {
+                modeText = '塗鴉題';
+            } else if (currentMode === 'text') {
+                modeText = '文字題';
+            } else if (currentMode === 'choice') {
+                modeText = '選擇題';
+            }
+            ui.modeIndicatorFullscreen.textContent = modeText;
+
             document.querySelectorAll('.thumbnail-container').forEach(cont => {
                 const img = cont.querySelector('img');
                 img.classList.toggle('active', img.dataset.pageId === pageId);
@@ -1980,8 +2133,17 @@ appId: \"...\""></textarea>
                     cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             });
-            
-            const currentMode = pageData.mode || 'presentation';
+
+            // 更新縮圖導航圖層中的選中狀態
+            document.querySelectorAll('.overlay-thumbnail-container').forEach(cont => {
+                const img = cont.querySelector('img');
+                if (img) {
+                    const isActive = img.dataset.pageId === pageId;
+                    img.classList.toggle('ring-4', isActive);
+                    img.classList.toggle('ring-yellow-400', isActive);
+                }
+            });
+
             ui.pageModeBtns.forEach(btn => {
                 btn.classList.toggle('bg-blue-500', btn.dataset.mode === currentMode);
                 btn.classList.toggle('bg-gray-500', btn.dataset.mode !== currentMode);
@@ -2114,7 +2276,11 @@ appId: \"...\""></textarea>
             isBroadcasting = true;
             ui.fullscreenView.classList.remove('hidden');
             ui.teacherControls.classList.remove('hidden');
-            
+            ui.toggleThumbnailsBtn.classList.remove('hidden');
+
+            // 生成縮圖導航列表
+            populateThumbnailsOverlay();
+
             resizeCanvasToSlide();
             window.addEventListener('resize', resizeCanvasToSlide);
 
@@ -2162,6 +2328,8 @@ appId: \"...\""></textarea>
             isBroadcasting = false;
             ui.fullscreenView.classList.add('hidden');
             ui.teacherControls.classList.add('hidden');
+            ui.toggleThumbnailsBtn.classList.add('hidden');
+            ui.thumbnailsOverlay.classList.add('hidden');
             window.removeEventListener('resize', resizeCanvasToSlide);
 
             if (attendeesListenerUnsubscribe) {
@@ -2174,7 +2342,8 @@ appId: \"...\""></textarea>
             }
             ui.studentListModal.classList.add('hidden');
             ui.submissionDisplayArea.classList.add('hidden');
-            
+            ui.viewSubmissionsBtn.classList.add('hidden'); // 結束同步時隱藏查看回應按鈕
+
             ui.syncBtn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block -mt-1" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -2376,11 +2545,11 @@ appId: \"...\""></textarea>
             const submissionDataUrl = tempCanvas.toDataURL('image/jpeg', 0.7);
 
             try {
-                // 檢查是否已經提交過塗鴉
+                // 檢查是否已經提交過塗鴉（根據姓名區分）
                 const q = query(
                     collection(db, SUBMISSIONS_COL_PATH),
                     where("pageId", "==", pageId),
-                    where("studentId", "==", userId),
+                    where("studentName", "==", studentName),
                     where("type", "==", "doodle")
                 );
                 const existingSubmissions = await getDocs(q);
@@ -2424,6 +2593,25 @@ appId: \"...\""></textarea>
             }
 
             try {
+                // 檢查是否已經提交過文字（根據姓名區分）
+                const q = query(
+                    collection(db, SUBMISSIONS_COL_PATH),
+                    where("pageId", "==", pageId),
+                    where("studentName", "==", studentName),
+                    where("type", "==", "text")
+                );
+                const existingSubmissions = await getDocs(q);
+
+                // 如果已經提交過，刪除舊的提交
+                if (!existingSubmissions.empty) {
+                    const batch = writeBatch(db);
+                    existingSubmissions.docs.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                }
+
+                // 提交新的文字
                 await addDoc(collection(db, SUBMISSIONS_COL_PATH), {
                     pageId: pageId,
                     studentId: userId,
@@ -2450,11 +2638,11 @@ appId: \"...\""></textarea>
             }
 
             try {
-                // 檢查是否已經提交過
+                // 檢查是否已經提交過（根據姓名區分）
                 const q = query(
                     collection(db, SUBMISSIONS_COL_PATH),
                     where("pageId", "==", pageId),
-                    where("studentId", "==", userId),
+                    where("studentName", "==", studentName),
                     where("type", "==", "choice")
                 );
                 const existingSubmissions = await getDocs(q);
@@ -2502,11 +2690,8 @@ appId: \"...\""></textarea>
         function renderSubmissions(submissions) {
             currentSubmissions = submissions;
 
-            Array.from(ui.submissionDisplayArea.children).forEach(child => {
-                if (child.id !== 'download-submissions-btn' && child.id !== 'compare-submissions-btn' && child.id !== 'reset-submissions-btn') {
-                    child.remove();
-                }
-            });
+            // 清空 Grid 容器
+            ui.submissionGridContainer.innerHTML = '';
 
             const pageId = teacherPageOrder[currentPageIndex];
             const currentMode = teacherLocalPages[pageId]?.mode;
@@ -2519,24 +2704,16 @@ appId: \"...\""></textarea>
 
                 if (submissions.filter(sub => sub.type === 'choice').length === 0) {
                     ui.submissionDisplayArea.classList.add('hidden');
+                    ui.viewSubmissionsBtn.classList.add('hidden');
                     // 即使沒有提交，也更新學生列表顯示
                     renderStudentList(activeStudentsList);
                     return;
                 }
 
-                ui.submissionDisplayArea.classList.remove('hidden');
-
-                // 創建查看結果按鈕
-                const viewResultsBtn = document.createElement('button');
-                viewResultsBtn.className = 'w-full px-4 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition flex items-center justify-center gap-2';
-                viewResultsBtn.innerHTML = '📊 查看選擇題結果';
-                viewResultsBtn.addEventListener('click', () => {
-                    showChoiceResults(submissions);
-                });
-                ui.submissionDisplayArea.appendChild(viewResultsBtn);
-
-                // 自動顯示結果（即時更新）
-                showChoiceResults(submissions);
+                // 選擇題模式下也顯示右上角按鈕
+                ui.viewSubmissionsBtn.classList.remove('hidden');
+                // 選擇題不需要顯示全畫面Grid區域
+                ui.submissionDisplayArea.classList.add('hidden');
 
                 // 更新學生列表顯示
                 renderStudentList(activeStudentsList);
@@ -2547,9 +2724,11 @@ appId: \"...\""></textarea>
             if (submissions.length > 0 && (currentMode === 'doodle' || currentMode === 'text')) {
                 ui.downloadSubmissionsBtn.classList.remove('hidden');
                 ui.resetSubmissionsBtn.classList.remove('hidden');
+                ui.viewSubmissionsBtn.classList.remove('hidden'); // 顯示查看回應按鈕
             } else {
                 ui.downloadSubmissionsBtn.classList.add('hidden');
                 ui.resetSubmissionsBtn.classList.add('hidden');
+                ui.viewSubmissionsBtn.classList.add('hidden'); // 隱藏查看回應按鈕
             }
 
             // 只在塗鴉模式顯示比較按鈕
@@ -2589,16 +2768,16 @@ appId: \"...\""></textarea>
 
             displaySubmissions.forEach((sub, index) => {
                 const wrapper = document.createElement('div');
-                wrapper.className = 'bg-white rounded-md shadow relative';
+                wrapper.className = 'bg-white rounded-lg shadow-lg relative overflow-hidden transition hover:shadow-xl';
 
                 // 為塗鴉模式添加勾選框
                 if (sub.type === 'doodle') {
                     const checkboxContainer = document.createElement('div');
-                    checkboxContainer.className = 'absolute top-1 right-1 z-10';
+                    checkboxContainer.className = 'absolute top-2 right-2 z-10';
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.className = 'w-5 h-5 cursor-pointer';
+                    checkbox.className = 'w-6 h-6 cursor-pointer';
                     checkbox.checked = selectedSubmissions.some(s => s.id === sub.id);
                     checkbox.addEventListener('change', (e) => {
                         e.stopPropagation();
@@ -2610,17 +2789,17 @@ appId: \"...\""></textarea>
                 }
 
                 const contentDiv = document.createElement('div');
-                contentDiv.className = 'p-1 cursor-pointer hover:bg-blue-100';
+                contentDiv.className = 'p-3 cursor-pointer hover:bg-blue-50';
 
                 const nameEl = document.createElement('p');
-                nameEl.className = 'text-xs font-bold text-gray-800 truncate';
+                nameEl.className = 'text-sm font-bold text-gray-800 mb-2 truncate';
                 nameEl.textContent = sub.studentName;
                 contentDiv.appendChild(nameEl);
 
                 if (sub.type === 'doodle') {
                     const img = document.createElement('img');
                     img.src = sub.content;
-                    img.className = 'w-full h-auto object-contain rounded-sm mt-1';
+                    img.className = 'w-full aspect-square object-contain rounded-md bg-gray-50';
                     contentDiv.appendChild(img);
                     contentDiv.addEventListener('click', () => {
                         ui.submissionViewerName.textContent = `${sub.studentName} 的作品`;
@@ -2629,7 +2808,7 @@ appId: \"...\""></textarea>
                     });
                 } else if (sub.type === 'text') {
                     const textEl = document.createElement('p');
-                    textEl.className = 'text-xs text-gray-600 mt-1 break-words';
+                    textEl.className = 'text-sm text-gray-700 break-words line-clamp-6 min-h-[6rem]';
                     textEl.textContent = sub.content;
                     contentDiv.appendChild(textEl);
                     contentDiv.addEventListener('click', () => {
@@ -2644,7 +2823,7 @@ appId: \"...\""></textarea>
                 }
 
                 wrapper.appendChild(contentDiv);
-                ui.submissionDisplayArea.appendChild(wrapper);
+                ui.submissionGridContainer.appendChild(wrapper);
             });
 
             // 更新學生列表顯示

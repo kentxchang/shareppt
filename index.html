@@ -243,7 +243,7 @@ appId: \"...\""></textarea>
             <div class="text-center mt-8">
                 <p class="text-xs text-slate-400">App ID: <span id="app-id-display"></span> &nbsp;&bull;&nbsp; User ID: <span id="user-id-display"></span></p>
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.6</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.7</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -788,7 +788,13 @@ appId: \"...\""></textarea>
         <div class="bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold">選擇題結果</h3>
-                <button id="close-choice-results-modal" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+                <div class="flex items-center gap-2">
+                    <button id="reset-choice-btn" class="px-3 py-1.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        重置
+                    </button>
+                    <button id="close-choice-results-modal" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+                </div>
             </div>
 
             <div id="choice-results-content" class="space-y-4">
@@ -998,6 +1004,7 @@ appId: \"...\""></textarea>
             studentChoiceBtns: document.querySelectorAll('.student-choice-btn'),
             choiceResultsModal: document.getElementById('choice-results-modal'),
             closeChoiceResultsModal: document.getElementById('close-choice-results-modal'),
+            resetChoiceBtn: document.getElementById('reset-choice-btn'),
             totalResponses: document.getElementById('total-responses'),
             correctRate: document.getElementById('correct-rate'),
             choiceCorrectAnswerSelect: document.getElementById('choice-correct-answer-select'),
@@ -1374,6 +1381,7 @@ appId: \"...\""></textarea>
             ui.downloadSubmissionsBtn.addEventListener('click', downloadSubmissions);
             ui.compareSubmissionsBtn.addEventListener('click', showComparison);
             ui.resetSubmissionsBtn.addEventListener('click', resetAllSubmissions);
+            ui.resetChoiceBtn.addEventListener('click', resetAllSubmissions);
             ui.closeComparisonModal.addEventListener('click', () => ui.comparisonModal.classList.add('hidden'));
             ui.closeChoiceResultsModal.addEventListener('click', () => ui.choiceResultsModal.classList.add('hidden'));
 
@@ -2820,18 +2828,20 @@ appId: \"...\""></textarea>
             if (currentMode === 'choice') {
                 ui.downloadSubmissionsBtn.classList.add('hidden');
                 ui.compareSubmissionsBtn.classList.add('hidden');
-                ui.resetSubmissionsBtn.classList.add('hidden');
 
-                if (submissions.filter(sub => sub.type === 'choice').length === 0) {
+                const choiceSubmissions = submissions.filter(sub => sub.type === 'choice');
+                if (choiceSubmissions.length === 0) {
                     ui.submissionDisplayArea.classList.add('hidden');
                     ui.viewSubmissionsBtn.classList.add('hidden');
+                    ui.resetSubmissionsBtn.classList.add('hidden');
                     // 即使沒有提交，也更新學生列表顯示
                     renderStudentList(activeStudentsList);
                     return;
                 }
 
-                // 選擇題模式下也顯示右上角按鈕
+                // 選擇題模式下顯示右上角按鈕和重置按鈕
                 ui.viewSubmissionsBtn.classList.remove('hidden');
+                ui.resetSubmissionsBtn.classList.remove('hidden');
                 // 選擇題不需要顯示全畫面Grid區域
                 ui.submissionDisplayArea.classList.add('hidden');
 
@@ -3259,8 +3269,8 @@ appId: \"...\""></textarea>
             const pageId = teacherPageOrder[currentPageIndex];
             const currentMode = teacherLocalPages[pageId]?.mode;
 
-            // 只在文字題和塗鴉題模式下可用
-            if (currentMode !== 'text' && currentMode !== 'doodle') {
+            // 在文字題、塗鴉題和選擇題模式下可用
+            if (currentMode !== 'text' && currentMode !== 'doodle' && currentMode !== 'choice') {
                 return;
             }
 
@@ -3270,7 +3280,13 @@ appId: \"...\""></textarea>
             }
 
             // 確認是否要重置
-            const confirmReset = confirm(`確定要重置所有學生的${currentMode === 'text' ? '文字' : '塗鴉'}回應嗎？\n\n這將刪除所有已收到的回應，讓學生可以重新作答。`);
+            let modeText = '塗鴉';
+            if (currentMode === 'text') {
+                modeText = '文字';
+            } else if (currentMode === 'choice') {
+                modeText = '選擇題';
+            }
+            const confirmReset = confirm(`確定要重置所有學生的${modeText}回應嗎？\n\n這將刪除所有已收到的回應，讓學生可以重新作答。`);
 
             if (!confirmReset) {
                 return;
@@ -3298,6 +3314,11 @@ appId: \"...\""></textarea>
                 await batch.commit();
 
                 await customAlert(`已成功重置 ${querySnapshot.size} 個學生回應！`);
+
+                // 如果是選擇題模式，重置後關閉結果Modal
+                if (currentMode === 'choice') {
+                    ui.choiceResultsModal.classList.add('hidden');
+                }
             } catch (error) {
                 console.error("重置回應失敗:", error);
                 await customAlert("重置失敗，請檢查網路連線後重試。");

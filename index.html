@@ -243,7 +243,7 @@ appId: \"...\""></textarea>
             <div class="text-center mt-8">
                 <p class="text-xs text-slate-400">App ID: <span id="app-id-display"></span> &nbsp;&bull;&nbsp; User ID: <span id="user-id-display"></span></p>
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.5</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.6</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -459,6 +459,11 @@ appId: \"...\""></textarea>
             <img id="fullscreen-slide" src="" alt="同步簡報畫面" class="max-w-full max-h-full object-contain">
             <canvas id="drawing-canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
 
+            <!-- 雷射筆紅點 -->
+            <div id="laser-pointer-dot" class="hidden absolute w-6 h-6 bg-red-600 rounded-full pointer-events-none z-[70] shadow-lg" style="transform: translate(-50%, -50%);">
+                <div class="absolute inset-0 bg-red-600 rounded-full animate-ping opacity-75"></div>
+            </div>
+
             <!-- 頁面導航按鈕 (左上角) -->
             <button id="toggle-thumbnails-btn" class="hidden fixed top-4 left-4 z-[60] p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xl transition-all transform hover:scale-105" title="頁面導航">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -524,6 +529,11 @@ appId: \"...\""></textarea>
                 </button>
                 <button id="clear-drawing-btn" class="hidden p-2 bg-white text-gray-800 rounded-lg shadow-lg hover:bg-gray-200" title="清除本頁畫記">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+                <button id="laser-pointer-btn" class="p-2 bg-white text-gray-800 rounded-lg shadow-lg hover:bg-gray-200" title="雷射筆">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
                 </button>
 
                 <!-- 分隔線 -->
@@ -849,6 +859,10 @@ appId: \"...\""></textarea>
         let currentPageIndex = 0;   // 當前頁面在 teacherPageOrder 中的索引
         let isBroadcasting = false;
 
+        // 雷射筆相關狀態
+        let isLaserPointerActive = false;
+        let laserPointerUpdateTimer = null;
+
         // 繪圖相關狀態
         let drawingCanvas, drawingContext;
         let isDrawingMode = false;
@@ -931,6 +945,8 @@ appId: \"...\""></textarea>
             thumbnailsOverlay: document.getElementById('thumbnails-overlay'),
             closeThumbnailsBtn: document.getElementById('close-thumbnails-btn'),
             thumbnailsOverlayContainer: document.getElementById('thumbnails-overlay-container'),
+            laserPointerBtn: document.getElementById('laser-pointer-btn'),
+            laserPointerDot: document.getElementById('laser-pointer-dot'),
             
             // 插入頁面控制項
             addPageBtn: document.getElementById('add-page-btn'),
@@ -1285,6 +1301,9 @@ appId: \"...\""></textarea>
             ui.closeThumbnailsBtn.addEventListener('click', () => {
                 ui.thumbnailsOverlay.classList.add('hidden');
             });
+
+            // 雷射筆開關
+            ui.laserPointerBtn.addEventListener('click', toggleLaserPointer);
 
             // 插入新頁面按鈕 - 顯示 Modal
             ui.addPageBtn.addEventListener('click', () => {
@@ -2362,6 +2381,102 @@ appId: \"...\""></textarea>
             } catch (error) {
                 console.error("停止同步失敗:", error);
             }
+
+            // 關閉雷射筆
+            if (isLaserPointerActive) {
+                toggleLaserPointer();
+            }
+        }
+
+        // --- 雷射筆功能 ---
+
+        function toggleLaserPointer() {
+            isLaserPointerActive = !isLaserPointerActive;
+
+            if (isLaserPointerActive) {
+                // 啟動雷射筆
+                ui.laserPointerBtn.classList.add('bg-red-500', 'text-white');
+                ui.laserPointerBtn.classList.remove('bg-white', 'text-gray-800');
+
+                // 添加滑鼠移動監聽
+                ui.fullscreenView.addEventListener('mousemove', handleLaserPointerMove);
+                ui.fullscreenView.addEventListener('mouseleave', handleLaserPointerLeave);
+
+                // 將畫筆模式關閉
+                if (isDrawingMode) {
+                    toggleDrawingMode();
+                }
+            } else {
+                // 關閉雷射筆
+                ui.laserPointerBtn.classList.remove('bg-red-500', 'text-white');
+                ui.laserPointerBtn.classList.add('bg-white', 'text-gray-800');
+
+                // 移除滑鼠移動監聽
+                ui.fullscreenView.removeEventListener('mousemove', handleLaserPointerMove);
+                ui.fullscreenView.removeEventListener('mouseleave', handleLaserPointerLeave);
+
+                // 清除 Firebase 中的雷射筆位置
+                clearLaserPointerPosition();
+            }
+        }
+
+        async function handleLaserPointerMove(e) {
+            if (!isLaserPointerActive || !isBroadcasting) return;
+
+            const slideImg = ui.fullscreenSlide;
+            const rect = slideImg.getBoundingClientRect();
+
+            // 計算滑鼠相對於圖片的位置（百分比）
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+            // 只在滑鼠在圖片範圍內時更新
+            if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
+                // 立即更新教師端紅點顯示
+                const left = rect.left + (x / 100) * rect.width;
+                const top = rect.top + (y / 100) * rect.height;
+                ui.laserPointerDot.style.left = `${left}px`;
+                ui.laserPointerDot.style.top = `${top}px`;
+                ui.laserPointerDot.classList.remove('hidden');
+
+                // 使用節流，避免過度更新 Firebase
+                if (laserPointerUpdateTimer) {
+                    clearTimeout(laserPointerUpdateTimer);
+                }
+
+                laserPointerUpdateTimer = setTimeout(async () => {
+                    try {
+                        await updateDoc(doc(db, SESSION_DOC_PATH), {
+                            laserPointer: { x, y, active: true }
+                        });
+                    } catch (error) {
+                        console.error("更新雷射筆位置失敗:", error);
+                    }
+                }, 50); // 每50ms最多更新一次
+            }
+        }
+
+        async function handleLaserPointerLeave() {
+            if (!isLaserPointerActive || !isBroadcasting) return;
+            ui.laserPointerDot.classList.add('hidden');
+            await clearLaserPointerPosition();
+        }
+
+        async function clearLaserPointerPosition() {
+            if (laserPointerUpdateTimer) {
+                clearTimeout(laserPointerUpdateTimer);
+                laserPointerUpdateTimer = null;
+            }
+
+            ui.laserPointerDot.classList.add('hidden');
+
+            try {
+                await updateDoc(doc(db, SESSION_DOC_PATH), {
+                    laserPointer: { active: false }
+                });
+            } catch (error) {
+                console.error("清除雷射筆位置失敗:", error);
+            }
         }
 
         // --- 繪圖邏輯 ---
@@ -2378,8 +2493,13 @@ appId: \"...\""></textarea>
             ui.penToolBtn.classList.toggle('bg-blue-200', isDrawingMode);
             ui.colorPalette.classList.toggle('hidden', !isDrawingMode);
             ui.clearDrawingBtn.classList.toggle('hidden', !isDrawingMode);
-            
+
             drawingCanvas.style.pointerEvents = isDrawingMode ? 'auto' : 'none';
+
+            // 啟用畫筆時關閉雷射筆
+            if (isDrawingMode && isLaserPointerActive) {
+                toggleLaserPointer();
+            }
         }
 
         function startDraw(e) {
@@ -3248,6 +3368,27 @@ appId: \"...\""></textarea>
         }
         
         /**
+         * 學生端更新雷射筆位置
+         */
+        function updateStudentLaserPointer(laserPointer) {
+            if (!laserPointer || !laserPointer.active) {
+                ui.laserPointerDot.classList.add('hidden');
+                return;
+            }
+
+            const slideImg = ui.fullscreenSlide;
+            const rect = slideImg.getBoundingClientRect();
+
+            // 根據百分比計算實際位置
+            const left = rect.left + (laserPointer.x / 100) * rect.width;
+            const top = rect.top + (laserPointer.y / 100) * rect.height;
+
+            ui.laserPointerDot.style.left = `${left}px`;
+            ui.laserPointerDot.style.top = `${top}px`;
+            ui.laserPointerDot.classList.remove('hidden');
+        }
+
+        /**
          * 學生開始監聽
          */
         function startStudentListener() {
@@ -3350,7 +3491,10 @@ appId: \"...\""></textarea>
                             }
                         });
                     }
-                
+
+                    // 更新雷射筆位置
+                    updateStudentLaserPointer(sessionData.laserPointer);
+
                 } else {
                     ui.fullscreenView.classList.add('hidden');
                     ui.studentWaiting.classList.remove('hidden');
@@ -3358,6 +3502,8 @@ appId: \"...\""></textarea>
                     if (unsubscribePageListener) {
                         unsubscribePageListener();
                     }
+                    // 隱藏雷射筆
+                    ui.laserPointerDot.classList.add('hidden');
                 }
             }, (error) => {
                 console.error("監聽 Session 失敗:", error);

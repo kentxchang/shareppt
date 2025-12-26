@@ -243,7 +243,7 @@ appId: \"...\""></textarea>
             <div class="text-center mt-8">
                 <p class="text-xs text-slate-400">App ID: <span id="app-id-display"></span> &nbsp;&bull;&nbsp; User ID: <span id="user-id-display"></span></p>
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.7</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.8</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -2547,7 +2547,7 @@ appId: \"...\""></textarea>
                     size: penSize,
                     points: currentDrawingPath
                 };
-                
+
                 const pageId = teacherPageOrder[currentPageIndex];
                 if (!pageId) return;
 
@@ -2556,9 +2556,29 @@ appId: \"...\""></textarea>
                     await updateDoc(pageDocRef, {
                         drawings: arrayUnion(pathData)
                     });
+
+                    // 同步更新本地緩存，確保切換頁面後畫記仍然保留
+                    if (teacherLocalPages[pageId]) {
+                        if (!teacherLocalPages[pageId].drawings) {
+                            teacherLocalPages[pageId].drawings = [];
+                        }
+                        teacherLocalPages[pageId].drawings.push(pathData);
+                    }
+
+                    // 更新 localDrawingsCache
+                    const cachedDrawings = localDrawingsCache.get(pageId) || [];
+                    cachedDrawings.push(pathData);
+                    localDrawingsCache.set(pageId, cachedDrawings);
+
                 } catch (error) {
                     if (error.code === 'not-found' || error.message.includes('No document to update')) {
                          await setDoc(pageDocRef, { drawings: [pathData] }, { merge: true });
+
+                         // 同樣更新本地緩存
+                         if (teacherLocalPages[pageId]) {
+                             teacherLocalPages[pageId].drawings = [pathData];
+                         }
+                         localDrawingsCache.set(pageId, [pathData]);
                     } else {
                         console.error("儲存繪圖失敗:", error);
                     }

@@ -243,7 +243,7 @@ appId: \"...\""></textarea>
             <div class="text-center mt-8">
                 <p class="text-xs text-slate-400">App ID: <span id="app-id-display"></span> &nbsp;&bull;&nbsp; User ID: <span id="user-id-display"></span></p>
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.8</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.9</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -881,6 +881,7 @@ appId: \"...\""></textarea>
         let studentHeartbeatInterval = null;
         let attendeesListenerUnsubscribe = null;
         let submissionsListenerUnsubscribe = null; // 用於監聽學生提交
+        let resizeCanvasListener = null; // 用於移除 resize 監聽器
         let currentSubmissions = []; // 快取當前頁面的提交內容
         let selectedSubmissions = []; // 選擇要比較的提交
         let activeStudentsList = []; // 當前活動的學生列表
@@ -889,6 +890,7 @@ appId: \"...\""></textarea>
         let studentPageCache = new Map();
         let studentCurrentPageIndex = -1;
         let studentCurrentPageMode = 'presentation'; // 學生當前頁面的模式
+        let currentActivePageId = null; // 追蹤當前應該顯示的頁面 ID（教師端和學生端共用）
         let studentName; // 學生姓名
         let studentPageOrder = []; // 學生端的頁面順序
 
@@ -1451,7 +1453,7 @@ appId: \"...\""></textarea>
                         await updateDoc(pageDocRef, { mode: newMode });
 
                         if(teacherLocalPages[pageId]) teacherLocalPages[pageId].mode = newMode;
-                        updateTeacherPage(pageId);
+                        await updateTeacherPage(pageId);
                         populateTeacherUI();
                         console.log(`頁面 ${pageId} 模式已更新為 ${newMode}`);
                     } catch (error) {
@@ -1616,13 +1618,22 @@ appId: \"...\""></textarea>
                     teacherPageOrder = newPageOrder;
                     teacherLocalPages = newPagesData;
 
+                    // 初始化繪圖快取
+                    teacherPageOrder.forEach(pageId => {
+                        const pageData = teacherLocalPages[pageId];
+                        const drawings = pageData.drawings || [];
+                        localDrawingsCache.set(pageId, drawings);
+                        // 確保 teacherLocalPages 引用同一個陣列
+                        pageData.drawings = drawings;
+                    });
+
                     await updateDoc(doc(db, SESSION_DOC_PATH), {
                         pageCount: numPages,
                         pageOrder: newPageOrder,
                         currentPage: 0,
                         isBroadcasting: false
                     });
-                    
+
                     populateTeacherUI();
                     ui.loadingSection.classList.add('hidden');
                     ui.presenterView.classList.remove('hidden');
@@ -1770,7 +1781,10 @@ appId: \"...\""></textarea>
                         // 初始化繪圖快取
                         teacherPageOrder.forEach(pageId => {
                             const pageData = teacherLocalPages[pageId];
-                            localDrawingsCache.set(pageId, pageData.drawings || []);
+                            const drawings = pageData.drawings || [];
+                            localDrawingsCache.set(pageId, drawings);
+                            // 確保 teacherLocalPages 引用同一個陣列
+                            pageData.drawings = drawings;
                         });
 
                         // 更新 Session 文件
@@ -1860,8 +1874,9 @@ appId: \"...\""></textarea>
 
                 const newPageId = `page_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 const newPageData = { data: base64Data, mode: 'presentation', drawings: [] };
-                
+
                 teacherLocalPages[newPageId] = newPageData;
+                localDrawingsCache.set(newPageId, []); // 初始化新頁面的畫記緩存
                 const insertAtIndex = teacherPageOrder.length === 0 ? 0 : currentPageIndex + 1;
                 teacherPageOrder.splice(insertAtIndex, 0, newPageId);
 
@@ -1938,7 +1953,7 @@ appId: \"...\""></textarea>
                     if (pageIndex <= currentPageIndex) {
                         currentPageIndex = Math.max(0, Math.min(currentPageIndex - 1, teacherPageOrder.length - 1));
                     }
-                    updateTeacherPage(teacherPageOrder[currentPageIndex]);
+                    await updateTeacherPage(teacherPageOrder[currentPageIndex]);
                 } else {
                     // 沒有頁面了，清空顯示
                     currentPageIndex = 0;
@@ -2079,7 +2094,7 @@ appId: \"...\""></textarea>
                 container.appendChild(deleteBtn);
                 container.classList.add('group');
 
-                img.addEventListener('click', () => updateTeacherPage(pageId));
+                img.addEventListener('click', async () => await updateTeacherPage(pageId));
 
                 panel.appendChild(container);
             });
@@ -2117,12 +2132,11 @@ appId: \"...\""></textarea>
             if (index === -1) return;
 
             currentPageIndex = index;
+            currentActivePageId = pageId; // 更新當前活動頁面 ID
             const pageData = teacherLocalPages[pageId];
 
             ui.mainSlideImg.src = pageData.data;
             ui.fullscreenSlide.src = pageData.data;
-
-            resizeCanvasToSlide();
 
             // 重置當前繪圖路徑（切換頁面時清除未保存的畫記）
             currentDrawingPath = [];
@@ -2133,9 +2147,39 @@ appId: \"...\""></textarea>
             // 切換頁面時隱藏查看回應按鈕，等新頁面的提交載入後再決定是否顯示
             ui.viewSubmissionsBtn.classList.add('hidden');
 
-            const drawings = pageData.drawings || [];
-            localDrawingsCache.set(pageId, drawings);
-            redrawAllPaths(drawings);
+            // 從 Firebase 讀取最新的畫記數據，確保與學生端同步
+            try {
+                const pageDocRef = doc(db, PAGES_COL_PATH, pageId);
+                const pageDoc = await getDoc(pageDocRef);
+
+                // 創建獨立的陣列副本，避免引用共用
+                let drawings = [];
+                if (pageDoc.exists()) {
+                    const data = pageDoc.data();
+                    // 使用 JSON 深拷貝或陣列展開來創建新副本
+                    drawings = data.drawings ? [...data.drawings] : [];
+                }
+
+                // 更新本地緩存為獨立副本
+                localDrawingsCache.set(pageId, drawings);
+                if (teacherLocalPages[pageId]) {
+                    teacherLocalPages[pageId].drawings = drawings;
+                }
+
+                // 調整 canvas 尺寸並重繪畫記（傳入正確的 pageId）
+                resizeCanvasToSlide(pageId);
+            } catch (error) {
+                console.error("讀取頁面畫記失敗:", error);
+                // 如果讀取失敗，使用本地緩存的副本
+                const cachedDrawings = localDrawingsCache.get(pageId);
+                const drawings = cachedDrawings ? [...cachedDrawings] : [];
+                localDrawingsCache.set(pageId, drawings);
+                if (teacherLocalPages[pageId]) {
+                    teacherLocalPages[pageId].drawings = drawings;
+                }
+                // 調整 canvas 尺寸並重繪畫記（傳入正確的 pageId）
+                resizeCanvasToSlide(pageId);
+            }
 
             const pageText = `${index + 1} / ${teacherPageOrder.length}`;
             ui.pageInfoPresenter.textContent = `頁碼: ${pageText}`;
@@ -2274,17 +2318,17 @@ appId: \"...\""></textarea>
             }
         }
         
-        function showPrevPage() {
+        async function showPrevPage() {
             if (currentPageIndex > 0) {
                 const prevPageId = teacherPageOrder[currentPageIndex - 1];
-                updateTeacherPage(prevPageId);
+                await updateTeacherPage(prevPageId);
             }
         }
-        
-        function showNextPage() {
+
+        async function showNextPage() {
             if (currentPageIndex < teacherPageOrder.length - 1) {
                 const nextPageId = teacherPageOrder[currentPageIndex + 1];
-                updateTeacherPage(nextPageId);
+                await updateTeacherPage(nextPageId);
             }
         }
 
@@ -2308,8 +2352,21 @@ appId: \"...\""></textarea>
             // 生成縮圖導航列表
             populateThumbnailsOverlay();
 
-            resizeCanvasToSlide();
-            window.addEventListener('resize', resizeCanvasToSlide);
+            // 調整 canvas 尺寸並重繪當前頁面的畫記
+            const currentPageId = teacherPageOrder[currentPageIndex];
+            if (currentPageId) {
+                currentActivePageId = currentPageId; // 設置當前活動頁面 ID
+                resizeCanvasToSlide(currentPageId);
+            }
+
+            // 創建並保存 resize listener 函數引用，以便之後可以移除
+            resizeCanvasListener = () => {
+                const pageId = teacherPageOrder[currentPageIndex];
+                if (pageId) {
+                    resizeCanvasToSlide(pageId);
+                }
+            };
+            window.addEventListener('resize', resizeCanvasListener);
 
             const attendeesQuery = collection(db, ATTENDEES_COL_PATH);
             attendeesListenerUnsubscribe = onSnapshot(attendeesQuery, (snapshot) => {
@@ -2353,11 +2410,17 @@ appId: \"...\""></textarea>
         
         async function stopSync() {
             isBroadcasting = false;
+            currentActivePageId = null; // 清除當前活動頁面 ID
             ui.fullscreenView.classList.add('hidden');
             ui.teacherControls.classList.add('hidden');
             ui.toggleThumbnailsBtn.classList.add('hidden');
             ui.thumbnailsOverlay.classList.add('hidden');
-            window.removeEventListener('resize', resizeCanvasToSlide);
+
+            // 正確移除 resize listener
+            if (resizeCanvasListener) {
+                window.removeEventListener('resize', resizeCanvasListener);
+                resizeCanvasListener = null;
+            }
 
             if (attendeesListenerUnsubscribe) {
                 attendeesListenerUnsubscribe();
@@ -2551,34 +2614,35 @@ appId: \"...\""></textarea>
                 const pageId = teacherPageOrder[currentPageIndex];
                 if (!pageId) return;
 
+                // 獲取當前頁面的畫記陣列，創建新副本避免引用問題
+                let currentDrawings = localDrawingsCache.get(pageId);
+                if (!currentDrawings) {
+                    currentDrawings = [];
+                } else {
+                    // 創建副本，避免直接修改 cache 中的陣列
+                    currentDrawings = [...currentDrawings];
+                }
+
+                // 添加新畫記到陣列副本
+                currentDrawings.push(pathData);
+
+                // 更新 cache 為新陣列
+                localDrawingsCache.set(pageId, currentDrawings);
+
+                // 同步更新 teacherLocalPages
+                if (teacherLocalPages[pageId]) {
+                    teacherLocalPages[pageId].drawings = currentDrawings;
+                }
+
+                // 保存到 Firebase
                 const pageDocRef = doc(db, PAGES_COL_PATH, pageId);
                 try {
                     await updateDoc(pageDocRef, {
                         drawings: arrayUnion(pathData)
                     });
-
-                    // 同步更新本地緩存，確保切換頁面後畫記仍然保留
-                    if (teacherLocalPages[pageId]) {
-                        if (!teacherLocalPages[pageId].drawings) {
-                            teacherLocalPages[pageId].drawings = [];
-                        }
-                        teacherLocalPages[pageId].drawings.push(pathData);
-                    }
-
-                    // 更新 localDrawingsCache
-                    const cachedDrawings = localDrawingsCache.get(pageId) || [];
-                    cachedDrawings.push(pathData);
-                    localDrawingsCache.set(pageId, cachedDrawings);
-
                 } catch (error) {
                     if (error.code === 'not-found' || error.message.includes('No document to update')) {
-                         await setDoc(pageDocRef, { drawings: [pathData] }, { merge: true });
-
-                         // 同樣更新本地緩存
-                         if (teacherLocalPages[pageId]) {
-                             teacherLocalPages[pageId].drawings = [pathData];
-                         }
-                         localDrawingsCache.set(pageId, [pathData]);
+                         await setDoc(pageDocRef, { drawings: currentDrawings }, { merge: true });
                     } else {
                         console.error("儲存繪圖失敗:", error);
                     }
@@ -2624,12 +2688,22 @@ appId: \"...\""></textarea>
 
             const pageDocRef = doc(db, PAGES_COL_PATH, pageId);
             try {
-                await updateDoc(pageDocRef, { drawings: [] });
+                // 創建一個新的空陣列
+                const emptyDrawings = [];
+
+                // 更新到 Firebase
+                await updateDoc(pageDocRef, { drawings: emptyDrawings });
+
+                // 更新 localDrawingsCache（主要數據源）
+                localDrawingsCache.set(pageId, emptyDrawings);
+
+                // 同步 teacherLocalPages 引用
                 if (teacherLocalPages[pageId]) {
-                    teacherLocalPages[pageId].drawings = [];
+                    teacherLocalPages[pageId].drawings = emptyDrawings;
                 }
-                localDrawingsCache.set(pageId, []);
-                redrawAllPaths([]);
+
+                // 重繪畫布
+                redrawAllPaths(emptyDrawings);
             } catch (error) {
                 console.error("清除畫記失敗:", error);
             }
@@ -3470,19 +3544,22 @@ appId: \"...\""></textarea>
                             return;
                         }
 
+                        // 更新當前活動頁面 ID
+                        currentActivePageId = pageId;
+
                         unsubscribePageListener = onSnapshot(doc(db, PAGES_COL_PATH, pageId), (pageDoc) => {
                             if (pageDoc.exists()) {
                                 const pageData = pageDoc.data();
                                 studentCurrentPageMode = pageData.mode || 'presentation';
-                                
+
                                 if (ui.fullscreenSlide.src !== pageData.data) {
                                     ui.fullscreenSlide.src = pageData.data;
                                 }
 
-                                resizeCanvasToSlide();
-                                const teacherDrawings = pageData.drawings || [];
+                                // 創建獨立的陣列副本，避免引用共用
+                                const teacherDrawings = pageData.drawings ? [...pageData.drawings] : [];
                                 localDrawingsCache.set(pageId, teacherDrawings);
-                                redrawAllPaths(teacherDrawings);
+                                resizeCanvasToSlide(pageId);
                                 
                                 // 根據模式顯示對應UI
                                 if (studentCurrentPageMode === 'choice') {
@@ -3540,6 +3617,7 @@ appId: \"...\""></textarea>
                     ui.fullscreenView.classList.add('hidden');
                     ui.studentWaiting.classList.remove('hidden');
                     studentCurrentPageIndex = -1;
+                    currentActivePageId = null; // 清除當前活動頁面 ID
                     if (unsubscribePageListener) {
                         unsubscribePageListener();
                     }
@@ -3574,13 +3652,22 @@ appId: \"...\""></textarea>
 
         /**
          * 調整 Canvas 尺寸以匹配顯示的圖片
+         * @param {string} pageId - 可選的頁面 ID，用於指定要重繪哪個頁面的畫記
          */
-        function resizeCanvasToSlide() {
+        function resizeCanvasToSlide(pageId = null) {
             const img = ui.fullscreenSlide;
             const canvas = ui.drawingCanvas;
 
             if (!img.complete || img.naturalHeight === 0) {
-                img.onload = resizeCanvasToSlide;
+                // 圖片還沒加載完，等待加載完成後再重繪
+                img.onload = () => {
+                    // 檢查頁面是否還是當前應該顯示的頁面
+                    if (pageId && pageId !== currentActivePageId) {
+                        console.log(`頁面已切換，跳過重繪 ${pageId}`);
+                        return;
+                    }
+                    resizeCanvasToSlide(pageId);
+                };
                 return;
             }
 
@@ -3601,9 +3688,10 @@ appId: \"...\""></textarea>
             drawingContext.lineJoin = 'round';
 
             // 重繪當前頁面的畫記（如果有的話）
-            const pageId = studentPageOrder[studentCurrentPageIndex];
-            if (pageId) {
-                const teacherDrawings = localDrawingsCache.get(pageId) || [];
+            // 如果有指定 pageId，使用指定的；否則使用學生端的當前頁面
+            const targetPageId = pageId || studentPageOrder[studentCurrentPageIndex];
+            if (targetPageId) {
+                const teacherDrawings = localDrawingsCache.get(targetPageId) || [];
                 redrawAllPaths(teacherDrawings);
             }
         }

@@ -243,7 +243,7 @@ appId: \"...\""></textarea>
             <div class="text-center mt-8">
                 <p class="text-xs text-slate-400">App ID: <span id="app-id-display"></span> &nbsp;&bull;&nbsp; User ID: <span id="user-id-display"></span></p>
                 <div class="mt-2 text-slate-400 text-sm">
-                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V1.9</a>
+                    Made with <i class="fas fa-heart text-pink-400 mx-1"></i> by <a href="https://kentxchang.blogspot.tw" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-600 font-bold hover:underline">阿剛老師 V2</a>
                 </div>
                 <div class="mt-4 text-slate-500 text-xs max-w-2xl mx-auto px-4">
                     <p class="mb-2">
@@ -724,13 +724,59 @@ appId: \"...\""></textarea>
     </div>
 
     <!-- 作品比較 Modal -->
-    <div id="comparison-modal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[200] flex items-center justify-center p-4">
-        <div class="w-full h-full flex flex-col">
-            <div class="flex justify-end p-2">
-                <button id="close-comparison-modal" class="text-white bg-gray-700 rounded-full h-10 w-10 flex items-center justify-center text-2xl font-bold hover:bg-gray-600">&times;</button>
+    <div id="comparison-modal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[200] flex flex-col overflow-hidden">
+        <div class="flex justify-end p-2 shrink-0">
+            <button id="close-comparison-modal" class="text-white bg-gray-700 rounded-full h-10 w-10 flex items-center justify-center text-2xl font-bold hover:bg-gray-600">&times;</button>
+        </div>
+        <div id="comparison-grid" class="flex-1 flex items-center justify-center p-4 overflow-hidden min-h-0">
+            <!-- 比較的作品將動態插入此處 -->
+        </div>
+    </div>
+
+    <!-- 教師異機專用連結 Modal -->
+    <div id="teacher-link-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[150] flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">教師異機專用連結</h2>
+            <div class="space-y-4">
+                <p class="text-sm text-gray-600">使用此連結可在其他裝置直接進入教師模式（免再設定 Firebase）</p>
+
+                <!-- QR Code -->
+                <div class="flex justify-center p-4 bg-gray-50 rounded-lg">
+                    <div id="teacher-qrcode" class="bg-white p-2"></div>
+                </div>
+
+                <!-- 短網址載入狀態 -->
+                <div id="teacher-short-url-loading" class="hidden text-center text-sm text-gray-500">
+                    <span>⏳ 正在生成短網址...</span>
+                </div>
+
+                <!-- 短網址 -->
+                <div id="teacher-short-url-container" class="hidden space-y-2">
+                    <label class="text-xs font-semibold text-gray-700">短網址：</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="teacher-short-url" readonly class="flex-1 px-3 py-2 text-sm border rounded bg-gray-50 text-green-600 font-medium" value="">
+                        <button id="copy-teacher-short-link-btn" class="px-4 py-2 bg-green-500 text-white font-semibold rounded hover:bg-green-600 transition">
+                            複製
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 原始連結網址 -->
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-gray-700">原始網址：</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="teacher-link-url" readonly class="flex-1 px-3 py-2 text-xs border rounded bg-gray-50 text-gray-600" value="">
+                        <button id="copy-teacher-original-link-btn" class="px-4 py-2 bg-gray-500 text-white text-sm font-semibold rounded hover:bg-gray-600 transition">
+                            複製
+                        </button>
+                    </div>
+                </div>
+
+                <p id="copy-teacher-link-success" class="hidden text-sm text-green-600 text-center">✓ 已複製到剪貼簿</p>
             </div>
-            <div id="comparison-grid" class="flex-1 flex items-center justify-center p-4">
-                <!-- 比較的作品將動態插入此處 -->
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="close-teacher-link-modal" class="px-6 py-2 bg-gray-400 text-white font-semibold rounded hover:bg-gray-500 transition">關閉</button>
             </div>
         </div>
     </div>
@@ -1045,6 +1091,18 @@ appId: \"...\""></textarea>
             copyShortLinkBtn: document.getElementById('copy-short-link-btn'),
             copyOriginalLinkBtn: document.getElementById('copy-original-link-btn'),
             copyLinkSuccess: document.getElementById('copy-link-success'),
+
+            // 教師連結 Modal UI
+            teacherLinkModal: document.getElementById('teacher-link-modal'),
+            closeTeacherLinkModal: document.getElementById('close-teacher-link-modal'),
+            teacherQrcode: document.getElementById('teacher-qrcode'),
+            teacherLinkUrl: document.getElementById('teacher-link-url'),
+            teacherShortUrl: document.getElementById('teacher-short-url'),
+            teacherShortUrlLoading: document.getElementById('teacher-short-url-loading'),
+            teacherShortUrlContainer: document.getElementById('teacher-short-url-container'),
+            copyTeacherShortLinkBtn: document.getElementById('copy-teacher-short-link-btn'),
+            copyTeacherOriginalLinkBtn: document.getElementById('copy-teacher-original-link-btn'),
+            copyTeacherLinkSuccess: document.getElementById('copy-teacher-link-success'),
 
             // URL Iframe Modal UI
             urlIframeModal: document.getElementById('url-iframe-modal'),
@@ -2971,7 +3029,7 @@ appId: \"...\""></textarea>
                 return;
             }
 
-            ui.submissionDisplayArea.classList.remove('hidden');
+            // 不自動顯示回應區域，需要手動點擊「查看學生回應」按鈕
 
             // 對於文字題，只保留每個學生最後一次提交的答案
             let displaySubmissions = submissions;
@@ -3162,12 +3220,12 @@ appId: \"...\""></textarea>
             let gridClass = '';
 
             if (count === 1) {
-                gridClass = 'w-full h-full';
+                gridClass = 'w-full h-full flex items-center justify-center';
             } else if (count === 2) {
-                gridClass = 'grid grid-cols-2 gap-4 w-full h-full max-h-screen';
+                gridClass = 'grid grid-cols-2 gap-4 w-full h-full';
             } else {
                 // 3或4張都用四分割
-                gridClass = 'grid grid-cols-2 grid-rows-2 gap-4 w-full h-full max-h-screen';
+                gridClass = 'grid grid-cols-2 grid-rows-2 gap-4 w-full h-full';
             }
 
             const container = document.createElement('div');
@@ -3175,14 +3233,14 @@ appId: \"...\""></textarea>
 
             selectedSubmissions.forEach((sub, index) => {
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'flex flex-col items-center justify-center bg-gray-900 rounded-lg p-4 overflow-hidden';
+                itemDiv.className = 'flex flex-col items-center bg-gray-900 rounded-lg p-2 overflow-hidden min-h-0';
 
                 const nameLabel = document.createElement('div');
-                nameLabel.className = 'text-white text-xl font-bold mb-2';
+                nameLabel.className = 'text-white text-lg font-bold mb-1 shrink-0';
                 nameLabel.textContent = sub.studentName;
 
                 const imgContainer = document.createElement('div');
-                imgContainer.className = 'flex-1 flex items-center justify-center w-full overflow-hidden';
+                imgContainer.className = 'flex-1 flex items-center justify-center w-full overflow-hidden min-h-0';
 
                 const img = document.createElement('img');
                 img.src = sub.content;
@@ -3894,9 +3952,9 @@ appId: \"...\""></textarea>
             }
         }
 
-        function handleGenerateUrl() {
+        async function handleGenerateUrl() {
             const configContent = ui.configTextarea.value.trim();
-            
+
             if (!configContent || !isConfigApplied) {
                 showCopyMessage("請先成功套用設定", true);
                 return;
@@ -3904,32 +3962,75 @@ appId: \"...\""></textarea>
 
             try {
                 const base64Config = btoa(configContent);
-                
-                const newUrl = `${window.location.origin}${window.location.pathname}?config=${base64Config}`;
+                const teacherUrl = `${window.location.origin}${window.location.pathname}?config=${base64Config}`;
 
-                const tempInput = document.createElement('textarea');
-                tempInput.value = newUrl;
-                tempInput.style.position = 'absolute';
-                tempInput.style.left = '-9999px';
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                tempInput.setSelectionRange(0, 99999);
-                
-                let success = false;
-                try {
-                    success = document.execCommand('copy');
-                } catch (err) {
-                    console.error('無法自動複製:', err);
-                }
-                
-                document.body.removeChild(tempInput);
-                
-                if (success) {
-                    showCopyMessage("專用網址已複製到剪貼簿！", false);
+                ui.teacherLinkUrl.value = teacherUrl;
+
+                // 顯示 Modal
+                ui.teacherLinkModal.classList.remove('hidden');
+                ui.copyTeacherLinkSuccess.classList.add('hidden');
+                ui.teacherShortUrlContainer.classList.add('hidden');
+
+                // 檢查是否為 HTTP/HTTPS 協議
+                const isHttpProtocol = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+
+                // 清除舊的 QR code
+                ui.teacherQrcode.innerHTML = '';
+
+                if (isHttpProtocol) {
+                    // 只在 HTTP/HTTPS 協議下才生成短網址
+                    ui.teacherShortUrlLoading.classList.remove('hidden');
+
+                    let shortUrl = '';
+                    try {
+                        const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(teacherUrl)}`);
+                        if (response.ok) {
+                            shortUrl = await response.text();
+                            ui.teacherShortUrl.value = shortUrl;
+                            ui.teacherShortUrlContainer.classList.remove('hidden');
+
+                            // 使用短網址生成 QR code
+                            new QRCode(ui.teacherQrcode, {
+                                text: shortUrl,
+                                width: 200,
+                                height: 200,
+                                colorDark: "#000000",
+                                colorLight: "#ffffff",
+                                correctLevel: QRCode.CorrectLevel.H
+                            });
+                        } else {
+                            throw new Error('短網址服務回應錯誤');
+                        }
+                    } catch (error) {
+                        console.error("生成短網址失敗:", error);
+                        ui.teacherShortUrl.value = '(短網址生成失敗，請使用原始網址)';
+                        ui.teacherShortUrlContainer.classList.remove('hidden');
+
+                        // 短網址失敗時，使用原始網址生成 QR code
+                        new QRCode(ui.teacherQrcode, {
+                            text: teacherUrl,
+                            width: 200,
+                            height: 200,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
+                    ui.teacherShortUrlLoading.classList.add('hidden');
                 } else {
-                    showCopyMessage("複製網址失敗，請手動複製。", true);
-                    ui.configTextarea.value = newUrl;
-                    ui.configTextarea.select();
+                    // file:// 或其他協議，直接使用原始網址
+                    ui.teacherShortUrl.value = '(僅支援 HTTP/HTTPS，請使用原始網址)';
+                    ui.teacherShortUrlContainer.classList.remove('hidden');
+
+                    // 使用原始網址生成 QR code
+                    new QRCode(ui.teacherQrcode, {
+                        text: teacherUrl,
+                        width: 200,
+                        height: 200,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
                 }
 
             } catch (error) {
@@ -4159,6 +4260,85 @@ appId: \"...\""></textarea>
             }
         }
 
+        /**
+         * 複製教師短網址
+         */
+        async function copyTeacherShortLink() {
+            const url = ui.teacherShortUrl.value;
+
+            if (url.includes('失敗') || url.includes('僅支援')) {
+                await customAlert('短網址生成失敗，請使用原始網址');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(url);
+                ui.copyTeacherLinkSuccess.textContent = '✓ 短網址已複製到剪貼簿';
+                ui.copyTeacherLinkSuccess.classList.remove('hidden');
+                setTimeout(() => {
+                    ui.copyTeacherLinkSuccess.classList.add('hidden');
+                }, 3000);
+            } catch (err) {
+                // Fallback 方法
+                const tempInput = document.createElement('textarea');
+                tempInput.value = url;
+                tempInput.style.position = 'absolute';
+                tempInput.style.left = '-9999px';
+                document.body.appendChild(tempInput);
+                tempInput.select();
+
+                try {
+                    document.execCommand('copy');
+                    ui.copyTeacherLinkSuccess.textContent = '✓ 短網址已複製到剪貼簿';
+                    ui.copyTeacherLinkSuccess.classList.remove('hidden');
+                    setTimeout(() => {
+                        ui.copyTeacherLinkSuccess.classList.add('hidden');
+                    }, 3000);
+                } catch (err2) {
+                    await customAlert('複製失敗，請手動複製連結');
+                }
+
+                document.body.removeChild(tempInput);
+            }
+        }
+
+        /**
+         * 複製教師原始連結
+         */
+        async function copyTeacherOriginalLink() {
+            const url = ui.teacherLinkUrl.value;
+
+            try {
+                await navigator.clipboard.writeText(url);
+                ui.copyTeacherLinkSuccess.textContent = '✓ 原始網址已複製到剪貼簿';
+                ui.copyTeacherLinkSuccess.classList.remove('hidden');
+                setTimeout(() => {
+                    ui.copyTeacherLinkSuccess.classList.add('hidden');
+                }, 3000);
+            } catch (err) {
+                // Fallback 方法
+                const tempInput = document.createElement('textarea');
+                tempInput.value = url;
+                tempInput.style.position = 'absolute';
+                tempInput.style.left = '-9999px';
+                document.body.appendChild(tempInput);
+                tempInput.select();
+
+                try {
+                    document.execCommand('copy');
+                    ui.copyTeacherLinkSuccess.textContent = '✓ 原始網址已複製到剪貼簿';
+                    ui.copyTeacherLinkSuccess.classList.remove('hidden');
+                    setTimeout(() => {
+                        ui.copyTeacherLinkSuccess.classList.add('hidden');
+                    }, 3000);
+                } catch (err2) {
+                    await customAlert('複製失敗，請手動複製連結');
+                }
+
+                document.body.removeChild(tempInput);
+            }
+        }
+
         async function endPresentation() {
             const result = await customConfirm('確定要結束並刪除這次簡報的所有雲端資料嗎？此操作無法復原。');
             if (!result) {
@@ -4238,6 +4418,11 @@ appId: \"...\""></textarea>
         ui.applySettingsBtn.addEventListener('click', handleApplySettings);
         ui.generateUrlBtn.addEventListener('click', handleGenerateUrl);
         ui.clearConfigBtn.addEventListener('click', handleClearConfig);
+
+        // 教師連結 Modal 事件監聽器
+        ui.closeTeacherLinkModal.addEventListener('click', () => ui.teacherLinkModal.classList.add('hidden'));
+        ui.copyTeacherShortLinkBtn.addEventListener('click', copyTeacherShortLink);
+        ui.copyTeacherOriginalLinkBtn.addEventListener('click', copyTeacherOriginalLink);
 
         // --- 啟動 App ---
         setupFirebaseConfig();
